@@ -16,8 +16,8 @@ Depends on
 Actively developed and tested on
 --------------------------------
 
-Ubuntu 12.04
-Windows 7
+* Ubuntu 12.04
+* Windows 7
 
 Team
 -----
