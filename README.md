@@ -13,6 +13,12 @@ Depends on
 * py-androidbuild (referenced in the externals folder)
     * can be installed in linux using `./install_py-androidbuild_linux`
 
+Actively developed and tested on
+--------------------------------
+
+Ubuntu 12.04
+Windows 7
+
 Team
 -----
 
