@@ -151,7 +151,7 @@ class noCLIpseFrame(wx.Frame):
         self.project_tab = wx.Panel(self.tab_notebook, -1)
         self.project_window = wx.SplitterWindow(self.project_tab, -1, style=wx.SP_3D | wx.SP_BORDER)
         self.project_list_pane = wx.Panel(self.project_window, -1)
-        self.project_list = wx.ListBox(self.project_list_pane, -1, choices=["<New Project>"], style=wx.LB_SORT)
+        self.project_list = wx.ListBox(self.project_list_pane, -1, choices=["<New Project>"])
         self.project_details_pane = wx.Panel(self.project_window, -1)
         self.project_name_label = wx.StaticText(self.project_details_pane, -1, "Project Name (optional)")
         self.project_name = wx.TextCtrl(self.project_details_pane, -1, "")
@@ -468,6 +468,10 @@ class Generic:
 
 #write the config file on exit
 def write_config():
+    #sort the project lists
+    config.projects.sort(key=lambda project: project.name or project.path)
+    config.libprojects.sort(key=lambda project: project.name or project.path)
+
     print "writing config"
     conf_file = open(".config", "wb")
     cPickle.dump(config, conf_file)
@@ -476,7 +480,12 @@ def write_config():
 def add_project_to_sidebar(project, list_box, library = False, do_select = True):
     project_title = project.name or project.path
     new_index = list_box.Append(project_title, project)
+    print "New Index:", new_index
     if do_select: list_box.SetSelection(new_index)
+
+    first_index = list_box.FindString("<New Project>")
+    print "<New Project> Index:", first_index
+    list_box.SetFirstItem(first_index)
 
 #this grabs the user's directory in both windows and linux
 homedir = os.path.expanduser("~")
