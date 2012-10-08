@@ -203,10 +203,12 @@ class noCLIpseFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.launch_android, self.android_launch_sdk)
         self.Bind(wx.EVT_MENU, self.launch_avd, self.android_launch_avd)
         self.Bind(wx.EVT_MENU, self.launch_ddms, self.android_launch_ddms)
+        self.Bind(wx.EVT_LISTBOX, self.project_select_handler, self.project_list)
         self.Bind(wx.EVT_BUTTON, self.list_targets_handler, self.list_targets_button)
         self.Bind(wx.EVT_BUTTON, self.save_project_handler, self.save_project)
         self.Bind(wx.EVT_CHOICE, self.build_type_switch, self.build_type_choice)
         self.Bind(wx.EVT_BUTTON, self.build_project, self.build_button)
+        self.Bind(wx.EVT_LISTBOX, self.libproject_select_handler, self.libproject_list)
         self.Bind(wx.EVT_BUTTON, self.list_targets_handler, self.lib_list_targets_button)
         self.Bind(wx.EVT_BUTTON, self.save_project_handler, self.save_libproject)
         self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.changed_tab_handler, self.tab_notebook)
@@ -330,6 +332,23 @@ class noCLIpseFrame(wx.Frame):
         for libproject in config.libprojects:
             libproject.timestamp = time.time()
             add_project_to_sidebar(libproject, self.libproject_list, do_select=False)
+
+        new_project = Generic()
+        new_libproject = Generic()
+
+        new_project.name = ''
+        new_project.target = ''
+        new_project.path = self.project_path.GetPath()
+        new_project.activity = ''
+        new_project.package = ''
+
+        new_libproject.name = ''
+        new_libproject.target = ''
+        new_libproject.path = self.libproject_path.GetPath()
+        new_libproject.package = ''
+
+        self.project_list.SetClientData(0, new_project)
+        self.libproject_list.SetClientData(0, new_libproject)
 
         wx.Frame.Show(self)
 
@@ -471,6 +490,25 @@ class noCLIpseFrame(wx.Frame):
             print e.returncode
             print e.stderr
             print e.stdout
+
+    def project_select_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
+        project_index = self.project_list.GetSelection()
+        project = self.project_list.GetClientData(project_index)
+
+        self.project_name.SetValue(project.name)
+        self.project_target.SetValue(project.target)
+        self.project_path.SetPath(project.path)
+        self.activity_name.SetValue(project.activity)
+        self.project_package.SetValue(project.package)
+
+    def libproject_select_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
+        libproject_index = self.libproject_list.GetSelection()
+        libproject = self.libproject_list.GetClientData(libproject_index)
+
+        self.libproject_name.SetValue(libproject.name)
+        self.libproject_target.SetValue(libproject.target)
+        self.libproject_path.SetPath(libproject.path)
+        self.libproject_package.SetValue(libproject.package)
 
 # end of class noCLIpseFrame
 
