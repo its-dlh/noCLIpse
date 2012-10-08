@@ -204,12 +204,19 @@ class noCLIpseFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.launch_avd, self.android_launch_avd)
         self.Bind(wx.EVT_MENU, self.launch_ddms, self.android_launch_ddms)
         self.Bind(wx.EVT_LISTBOX, self.project_select_handler, self.project_list)
+        self.Bind(wx.EVT_TEXT, self.project_name_change_handler, self.project_name)
+        self.Bind(wx.EVT_TEXT, self.project_target_change_handler, self.project_target)
         self.Bind(wx.EVT_BUTTON, self.list_targets_handler, self.list_targets_button)
+        self.Bind(wx.EVT_TEXT, self.activity_name_change_handler, self.activity_name)
+        self.Bind(wx.EVT_TEXT, self.project_package_change_handler, self.project_package)
         self.Bind(wx.EVT_BUTTON, self.save_project_handler, self.save_project)
         self.Bind(wx.EVT_CHOICE, self.build_type_switch, self.build_type_choice)
         self.Bind(wx.EVT_BUTTON, self.build_project, self.build_button)
         self.Bind(wx.EVT_LISTBOX, self.libproject_select_handler, self.libproject_list)
+        self.Bind(wx.EVT_TEXT, self.libproject_name_change_handler, self.libproject_name)
+        self.Bind(wx.EVT_TEXT, self.libproject_target_change_handler, self.libproject_target)
         self.Bind(wx.EVT_BUTTON, self.list_targets_handler, self.lib_list_targets_button)
+        self.Bind(wx.EVT_TEXT, self.libproject_package_change_handler, self.libproject_package)
         self.Bind(wx.EVT_BUTTON, self.save_project_handler, self.save_libproject)
         self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.changed_tab_handler, self.tab_notebook)
         # end wxGlade
@@ -341,11 +348,13 @@ class noCLIpseFrame(wx.Frame):
         new_project.path = self.project_path.GetPath()
         new_project.activity = ''
         new_project.package = ''
+        new_project.unsaved = False
 
         new_libproject.name = ''
         new_libproject.target = ''
         new_libproject.path = self.libproject_path.GetPath()
         new_libproject.package = ''
+        new_libproject.unsaved = False
 
         self.project_list.SetClientData(0, new_project)
         self.libproject_list.SetClientData(0, new_libproject)
@@ -362,8 +371,11 @@ class noCLIpseFrame(wx.Frame):
         current_tab = self.tab_notebook.GetCurrentPage()
         if current_tab == self.project_tab:
             new_project = self.project_list.GetSelection() == 0
-
-            project = Generic()
+            if new_project:
+                project = Generic()
+            else:
+                project_index = self.project_list.GetSelection()
+                project = self.project_list.GetClientData(project_index)
             project.name = self.project_name.GetValue()
             project.target = self.project_target.GetValue()
             project.path = self.project_path.GetPath()
@@ -386,6 +398,8 @@ class noCLIpseFrame(wx.Frame):
             command.extend(["--package", project.package])
 
             if project.name: command.extend(["--name", project.name])
+
+            project.unsaved = False
         elif current_tab == self.libproject_tab:
             new_libproject = self.libproject_list.GetSelection() == 0
 
@@ -495,20 +509,58 @@ class noCLIpseFrame(wx.Frame):
         project_index = self.project_list.GetSelection()
         project = self.project_list.GetClientData(project_index)
 
-        self.project_name.SetValue(project.name)
-        self.project_target.SetValue(project.target)
+        self.project_name.ChangeValue(project.name)
+        self.project_target.ChangeValue(project.target)
         self.project_path.SetPath(project.path)
-        self.activity_name.SetValue(project.activity)
-        self.project_package.SetValue(project.package)
+        self.activity_name.ChangeValue(project.activity)
+        self.project_package.ChangeValue(project.package)
 
     def libproject_select_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
         libproject_index = self.libproject_list.GetSelection()
         libproject = self.libproject_list.GetClientData(libproject_index)
 
-        self.libproject_name.SetValue(libproject.name)
-        self.libproject_target.SetValue(libproject.target)
+        self.libproject_name.ChangeValue(libproject.name)
+        self.libproject_target.ChangeValue(libproject.target)
         self.libproject_path.SetPath(libproject.path)
-        self.libproject_package.SetValue(libproject.package)
+        self.libproject_package.ChangeValue(libproject.package)
+
+    def project_name_change_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
+        project_index = self.project_list.GetSelection()
+        project = self.project_list.GetClientData(project_index)
+        project.name = self.project_name.GetValue()
+        project.unsaved = True
+
+    def project_target_change_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
+        project_index = self.project_list.GetSelection()
+        project = self.project_list.GetClientData(project_index)
+        project.target = self.project_target.GetValue()
+        project.unsaved = True
+
+    def activity_name_change_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
+        project_index = self.project_list.GetSelection()
+        project = self.project_list.GetClientData(project_index)
+        project.activity = self.activity_name.GetValue()
+        project.unsaved = True
+
+    def project_package_change_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
+        project_index = self.project_list.GetSelection()
+        project = self.project_list.GetClientData(project_index)
+        project.package = self.project_package.GetValue()
+        project.unsaved = True
+
+    def libproject_name_change_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
+        project_index = self.project_list.GetSelection()
+        print "Event handler `libproject_name_change_handler' not implemented"
+        event.Skip()
+
+    def libproject_target_change_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
+        project_index = self.project_list.GetSelection()
+        print "Event handler `libproject_target_change_handler' not implemented"
+        event.Skip()
+
+    def libproject_package_change_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
+        print "Event handler `libproject_package_change_handler' not implemented"
+        event.Skip()
 
 # end of class noCLIpseFrame
 
