@@ -221,6 +221,8 @@ class noCLIpseFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.save_project_handler, self.save_libproject)
         self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.changed_tab_handler, self.tab_notebook)
         # end wxGlade
+        self.Bind(wx.EVT_DIRPICKER_CHANGED, self.project_path_change_handler, self.project_path)
+        self.Bind(wx.EVT_DIRPICKER_CHANGED, self.libproject_path_change_handler, self.libproject_path)
 
         #self.project_path.Destroy()
         #self.project_path = wx.DirPickerCtrl(self.project_details_pane, -1, homedir, "Select a path for this project", style=wx.DIRP_DEFAULT_STYLE)
@@ -555,6 +557,12 @@ class noCLIpseFrame(wx.Frame):
         project.target = self.project_target.GetValue()
         project.unsaved = True
 
+    def project_path_change_handler(self, event):
+        project_index = self.project_list.GetSelection()
+        project = self.project_list.GetClientData(project_index)
+        project.path = self.project_path.GetPath()
+        project.unsaved = True
+
     def activity_name_change_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
         project_index = self.project_list.GetSelection()
         project = self.project_list.GetClientData(project_index)
@@ -577,6 +585,12 @@ class noCLIpseFrame(wx.Frame):
         libproject_index = self.libproject_list.GetSelection()
         libproject = self.libproject_list.GetClientData(libproject_index)
         libproject.target = self.libproject_target.GetValue()
+        libproject.unsaved = True
+
+    def libproject_path_change_handler(self, event):
+        libproject_index = self.libproject_list.GetSelection()
+        libproject = self.libproject_list.GetClientData(libproject_index)
+        libproject.path = self.libproject_path.GetPath()
         libproject.unsaved = True
 
     def libproject_package_change_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
