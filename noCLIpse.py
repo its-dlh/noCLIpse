@@ -392,6 +392,9 @@ class noCLIpseFrame(wx.Frame):
                 del project.original
                 project_data.original.__dict__.update(project.__dict__)
 
+                #reload the project title
+                self.project_list.SetString(project_index, project.name or project.path)
+
                 command = [config.sdk_path+androidpath, "update", "project"]
             command.extend(["--target", project.target])
             command.extend(["--path", project.path])
@@ -430,6 +433,9 @@ class noCLIpseFrame(wx.Frame):
                  #update the config object
                 del libproject.original
                 libproject_data.original.__dict__.update(libproject.__dict__)
+
+                #reload the project title
+                self.libproject_list.SetString(libproject_index, libproject.name or libproject.path)
 
                 command = [config.sdk_path+androidpath, "update", "lib-project"]
             command.extend(["--target", libproject.target])
