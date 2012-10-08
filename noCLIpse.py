@@ -11,6 +11,7 @@ import atexit
 import cPickle
 import logging
 import os.path
+import time
 import platform
 from subprocess import Popen, check_output
 import wx
@@ -155,7 +156,7 @@ class noCLIpseFrame(wx.Frame):
         self.project_name_label = wx.StaticText(self.project_details_pane, -1, "Project Name (optional)")
         self.project_name = wx.TextCtrl(self.project_details_pane, -1, "")
         self.project_target_label = wx.StaticText(self.project_details_pane, -1, "Target Number")
-        self.list_targets = wx.Choice(self.project_details_pane, -1, choices=[])
+        self.project_target = wx.ComboBox(self.project_details_pane, -1, choices=[], style=wx.CB_DROPDOWN)
         self.list_targets_button = wx.Button(self.project_details_pane, -1, "List Targets")
         self.project_path_label = wx.StaticText(self.project_details_pane, -1, "Project Path")
         self.project_path = wx.DirPickerCtrl(self.project_details_pane, -1, homedir, "Select a path for this project", style=wx.DIRP_USE_TEXTCTRL)
@@ -250,7 +251,7 @@ class noCLIpseFrame(wx.Frame):
         project_details.Add(self.project_name_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         project_details.Add(self.project_name, 0, wx.EXPAND, 0)
         project_details.Add(self.project_target_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-        sizer_3.Add(self.list_targets, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
+        sizer_3.Add(self.project_target, 0, 0, 0)
         sizer_3.Add(self.list_targets_button, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         project_details.Add(sizer_3, 1, wx.EXPAND, 0)
         project_details.Add(self.project_path_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
@@ -321,6 +322,11 @@ class noCLIpseFrame(wx.Frame):
             print "changing to " + config.sdk_path
 
         self.targets_panel.loadTargets()
+
+        for project in config.projects:
+            project.timestamp = time.time()
+            add_project_to_sidebar(project, self.project_list, do_select=False)
+
         wx.Frame.Show(self)
 
     def save_project_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
@@ -332,17 +338,41 @@ class noCLIpseFrame(wx.Frame):
 
         current_tab = self.tab_notebook.GetCurrentPage()
         if current_tab == self.project_tab:
-            command = [config.sdk_path+androidpath, "create", "project"]
-            command.extend(["--target", self.project_target.GetValue()])
-            command.extend(["--path", self.project_path.GetPath()])
-            command.extend(["--activity", self.activity_name.GetValue()])
-            command.extend(["--package", self.project_package.GetValue()])
+            new_project = self.project_list.GetSelection() == 0
+
+            project = Generic()
+            project.name = self.project_name.GetValue()
+            project.target = self.project_target.GetValue()
+            project.path = self.project_path.GetPath()
+            project.activity = self.activity_name.GetValue()
+            project.package = self.project_package.GetValue()
+            project.timestamp = time.time()
+
+            #if it's a new project, run create instead of update
+            if new_project:
+                #add the project to the list of projects in the config file and the sidebar
+                add_project_to_sidebar(project, self.project_list)
+                config.projects.append(project)
+                #begin the android create project command
+                command = [config.sdk_path+androidpath, "create", "project"]
+            else:
+                command = [config.sdk_path+androidpath, "update", "project"]
+            command.extend(["--target", project.target])
+            command.extend(["--path", project.path])
+            command.extend(["--activity", project.activity])
+            command.extend(["--package", project.package])
 
             name = self.project_name.GetValue()
             if name: command.extend(["--name", name])
         elif current_tab == self.libproject_tab:
-            print "lib project"
-            command = [config.sdk_path+androidpath, "create", "lib-project"]
+            #if it's a new lib project, run create instead of update
+            if self.libproject_list.GetSelection() == 0:
+                #add the path of the lib project to the list of lib projects in the config file
+                config.libprojects.append(self.libproject_path.GetPath())
+                #begin the android create lib-project command
+                command = [config.sdk_path+androidpath, "create", "lib-project"]
+            else:
+                command = [config.sdk_path+androidpath, "update", "lib-project"]
             command.extend(["--target", self.libproject_target.GetValue()])
             command.extend(["--path", self.libproject_path.GetPath()])
             command.extend(["--package", self.libproject_package.GetValue()])
@@ -354,10 +384,10 @@ class noCLIpseFrame(wx.Frame):
             #Popen([config.sdk_path+androidpath, "create", "project","--target","3", "--path","C:\Users\Dawson Goodell\New Folder", "--activity","testact", "--package","com.osmstudios.test"])
 
             print command
-            results = Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.read()
-            print results
-            self.results_panel.setBody(results)
-            self.results_panel.Show()
+            #results = Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.read()
+            #print results
+            #self.results_panel.setBody(results)
+            #self.results_panel.Show()
 
     def changed_tab_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
         print "Event handler `changed_tab_handler' not implemented"
@@ -443,6 +473,10 @@ def write_config():
     cPickle.dump(config, conf_file)
     conf_file.close()
 
+def add_project_to_sidebar(project, list_box, library = False, do_select = True):
+    project_title = project.name or project.path
+    new_index = list_box.Append(project_title, project)
+    if do_select: list_box.SetSelection(new_index)
 
 #this grabs the user's directory in both windows and linux
 homedir = os.path.expanduser("~")
