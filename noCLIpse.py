@@ -181,7 +181,7 @@ class noCLIpseFrame(wx.Frame):
         self.libproject_tab = wx.Panel(self.tab_notebook, -1)
         self.libproject_window = wx.SplitterWindow(self.libproject_tab, -1, style=wx.SP_3D | wx.SP_BORDER)
         self.libproject_list_pane = wx.Panel(self.libproject_window, -1)
-        self.libproject_list = wx.ListBox(self.libproject_list_pane, -1, choices=["<New Lib Project>"], style=wx.LB_SORT)
+        self.libproject_list = wx.ListBox(self.libproject_list_pane, -1, choices=["<New Lib Project>"])
         self.libproject_details_pane = wx.Panel(self.libproject_window, -1)
         self.libproject_name_label = wx.StaticText(self.libproject_details_pane, -1, "Lib Project Name (optional)")
         self.libproject_name = wx.TextCtrl(self.libproject_details_pane, -1, "")
@@ -327,6 +327,10 @@ class noCLIpseFrame(wx.Frame):
             project.timestamp = time.time()
             add_project_to_sidebar(project, self.project_list, do_select=False)
 
+        for libproject in config.libprojects:
+            libproject.timestamp = time.time()
+            add_project_to_sidebar(libproject, self.libproject_list, do_select=False)
+
         wx.Frame.Show(self)
 
     def save_project_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
@@ -362,23 +366,31 @@ class noCLIpseFrame(wx.Frame):
             command.extend(["--activity", project.activity])
             command.extend(["--package", project.package])
 
-            name = self.project_name.GetValue()
-            if name: command.extend(["--name", name])
+            if project.name: command.extend(["--name", project.name])
         elif current_tab == self.libproject_tab:
+            new_libproject = self.libproject_list.GetSelection() == 0
+
+            libproject = Generic()
+            libproject.name = self.libproject_name.GetValue()
+            libproject.target = self.libproject_target.GetValue()
+            libproject.path = self.libproject_path.GetPath()
+            libproject.package = self.libproject_package.GetValue()
+            libproject.timestamp = time.time()
+
             #if it's a new lib project, run create instead of update
-            if self.libproject_list.GetSelection() == 0:
-                #add the path of the lib project to the list of lib projects in the config file
-                config.libprojects.append(self.libproject_path.GetPath())
+            if new_libproject:
+                #add the project to the list of projects in the config file and the sidebar
+                add_project_to_sidebar(libproject, self.libproject_list)
+                config.libprojects.append(libproject)
                 #begin the android create lib-project command
                 command = [config.sdk_path+androidpath, "create", "lib-project"]
             else:
                 command = [config.sdk_path+androidpath, "update", "lib-project"]
-            command.extend(["--target", self.libproject_target.GetValue()])
-            command.extend(["--path", self.libproject_path.GetPath()])
-            command.extend(["--package", self.libproject_package.GetValue()])
+            command.extend(["--target", libproject.target])
+            command.extend(["--path", libproject.path])
+            command.extend(["--package", libproject.package])
             
-            name = self.libproject_name.GetValue()
-            if name: command.extend(["--name", name])
+            if libproject.name: command.extend(["--name", libproject.name])
 
         if len(command) >= 9:
             #Popen([config.sdk_path+androidpath, "create", "project","--target","3", "--path","C:\Users\Dawson Goodell\New Folder", "--activity","testact", "--package","com.osmstudios.test"])
@@ -470,22 +482,18 @@ class Generic:
 def write_config():
     #sort the project lists
     config.projects.sort(key=lambda project: project.name or project.path)
-    config.libprojects.sort(key=lambda project: project.name or project.path)
+    config.libprojects.sort(key=lambda libproject: libproject.name or libproject.path)
 
     print "writing config"
     conf_file = open(".config", "wb")
     cPickle.dump(config, conf_file)
     conf_file.close()
 
-def add_project_to_sidebar(project, list_box, library = False, do_select = True):
+def add_project_to_sidebar(project, list_box, do_select = True):
     project_title = project.name or project.path
     new_index = list_box.Append(project_title, project)
     print "New Index:", new_index
     if do_select: list_box.SetSelection(new_index)
-
-    first_index = list_box.FindString("<New Project>")
-    print "<New Project> Index:", first_index
-    list_box.SetFirstItem(first_index)
 
 #this grabs the user's directory in both windows and linux
 homedir = os.path.expanduser("~")
