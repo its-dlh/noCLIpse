@@ -9,6 +9,7 @@
 from android.build import AndroidProject, get_platform, ProgramFailedError
 import atexit
 import cPickle
+import copy
 import logging
 import os.path
 import time
@@ -343,18 +344,8 @@ class noCLIpseFrame(wx.Frame):
         new_project = Generic()
         new_libproject = Generic()
 
-        new_project.name = ''
-        new_project.target = ''
-        new_project.path = self.project_path.GetPath()
-        new_project.activity = ''
-        new_project.package = ''
-        new_project.unsaved = False
-
-        new_libproject.name = ''
-        new_libproject.target = ''
-        new_libproject.path = self.libproject_path.GetPath()
-        new_libproject.package = ''
-        new_libproject.unsaved = False
+        new_project.__dict__.update(empty_project)
+        new_libproject.__dict__.update(empty_libproject)
 
         self.project_list.SetClientData(0, new_project)
         self.libproject_list.SetClientData(0, new_libproject)
@@ -371,26 +362,36 @@ class noCLIpseFrame(wx.Frame):
         current_tab = self.tab_notebook.GetCurrentPage()
         if current_tab == self.project_tab:
             new_project = self.project_list.GetSelection() == 0
-            if new_project:
-                project = Generic()
-            else:
-                project_index = self.project_list.GetSelection()
-                project = self.project_list.GetClientData(project_index)
-            project.name = self.project_name.GetValue()
-            project.target = self.project_target.GetValue()
-            project.path = self.project_path.GetPath()
-            project.activity = self.activity_name.GetValue()
-            project.package = self.project_package.GetValue()
-            project.timestamp = time.time()
+
+            project_index = self.project_list.GetSelection()
+            project_data = self.project_list.GetClientData(project_index)
+
+            #project.name = self.project_name.GetValue()
+            #project.target = self.project_target.GetValue()
+            #project.path = self.project_path.GetPath()
+            #project.activity = self.activity_name.GetValue()
+            #project.package = self.project_package.GetValue()
+            project_data.timestamp = time.time()
+            project_data.unsaved = False
+
+            project = copy.copy(project_data)
 
             #if it's a new project, run create instead of update
             if new_project:
                 #add the project to the list of projects in the config file and the sidebar
-                add_project_to_sidebar(project, self.project_list)
                 config.projects.append(project)
+                add_project_to_sidebar(project, self.project_list)
+
+                #clear the project data
+                project_data.__dict__.update(empty_project)
+
                 #begin the android create project command
                 command = [config.sdk_path+androidpath, "create", "project"]
             else:
+                #update the config object
+                del project.original
+                project_data.original.__dict__.update(project.__dict__)
+
                 command = [config.sdk_path+androidpath, "update", "project"]
             command.extend(["--target", project.target])
             command.extend(["--path", project.path])
@@ -398,8 +399,6 @@ class noCLIpseFrame(wx.Frame):
             command.extend(["--package", project.package])
 
             if project.name: command.extend(["--name", project.name])
-
-            project.unsaved = False
         elif current_tab == self.libproject_tab:
             new_libproject = self.libproject_list.GetSelection() == 0
 
@@ -510,7 +509,7 @@ class noCLIpseFrame(wx.Frame):
         project = self.project_list.GetClientData(project_index)
 
         self.project_name.ChangeValue(project.name)
-        self.project_target.ChangeValue(project.target)
+        self.project_target.SetValue(project.target)
         self.project_path.SetPath(project.path)
         self.activity_name.ChangeValue(project.activity)
         self.project_package.ChangeValue(project.package)
@@ -520,7 +519,7 @@ class noCLIpseFrame(wx.Frame):
         libproject = self.libproject_list.GetClientData(libproject_index)
 
         self.libproject_name.ChangeValue(libproject.name)
-        self.libproject_target.ChangeValue(libproject.target)
+        self.libproject_target.SetValue(libproject.target)
         self.libproject_path.SetPath(libproject.path)
         self.libproject_package.ChangeValue(libproject.package)
 
@@ -580,14 +579,20 @@ def write_config():
     conf_file.close()
 
 def add_project_to_sidebar(project, list_box, do_select = True):
-    project_title = project.name or project.path
-    new_index = list_box.Append(project_title, project)
+    new_project = copy.copy(project)
+    new_project.original = project
+    project_title = new_project.name or new_project.path
+    new_index = list_box.Append(project_title, new_project)
     print "New Index:", new_index
     if do_select: list_box.SetSelection(new_index)
 
 #this grabs the user's directory in both windows and linux
 homedir = os.path.expanduser("~")
 homedir = homedir.replace("\\","/")
+
+empty_project = {'name': '', 'target': '', 'path': homedir, 'activity': '', 'package': '', 'unsaved': False}
+empty_libproject = dict(empty_project)
+del empty_libproject['activity']
 
 #check if the config file exists
 if os.path.isfile(".config"):
