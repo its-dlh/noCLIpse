@@ -402,21 +402,35 @@ class noCLIpseFrame(wx.Frame):
         elif current_tab == self.libproject_tab:
             new_libproject = self.libproject_list.GetSelection() == 0
 
-            libproject = Generic()
-            libproject.name = self.libproject_name.GetValue()
-            libproject.target = self.libproject_target.GetValue()
-            libproject.path = self.libproject_path.GetPath()
-            libproject.package = self.libproject_package.GetValue()
-            libproject.timestamp = time.time()
+            libproject_index = self.libproject_list.GetSelection()
+            libproject_data = self.libproject_list.GetClientData(libproject_index)
+
+            #libproject = Generic()
+            #libproject.name = self.libproject_name.GetValue()
+            #libproject.target = self.libproject_target.GetValue()
+            #libproject.path = self.libproject_path.GetPath()
+            #libproject.package = self.libproject_package.GetValue()
+            libproject_data.timestamp = time.time()
+            libproject_data.unsaved = False
+
+            libproject = copy.copy(libproject_data)
 
             #if it's a new lib project, run create instead of update
             if new_libproject:
                 #add the project to the list of projects in the config file and the sidebar
-                add_project_to_sidebar(libproject, self.libproject_list)
                 config.libprojects.append(libproject)
+                add_project_to_sidebar(libproject, self.libproject_list)
+
+                #clear the project data
+                libproject_data.__dict__.update(empty_libproject)
+
                 #begin the android create lib-project command
                 command = [config.sdk_path+androidpath, "create", "lib-project"]
             else:
+                 #update the config object
+                del libproject.original
+                libproject_data.original.__dict__.update(libproject.__dict__)
+
                 command = [config.sdk_path+androidpath, "update", "lib-project"]
             command.extend(["--target", libproject.target])
             command.extend(["--path", libproject.path])
@@ -548,18 +562,22 @@ class noCLIpseFrame(wx.Frame):
         project.unsaved = True
 
     def libproject_name_change_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
-        project_index = self.project_list.GetSelection()
-        print "Event handler `libproject_name_change_handler' not implemented"
-        event.Skip()
+        libproject_index = self.libproject_list.GetSelection()
+        libproject = self.libproject_list.GetClientData(libproject_index)
+        libproject.name = self.libproject_name.GetValue()
+        libproject.unsaved = True
 
     def libproject_target_change_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
-        project_index = self.project_list.GetSelection()
-        print "Event handler `libproject_target_change_handler' not implemented"
-        event.Skip()
+        libproject_index = self.libproject_list.GetSelection()
+        libproject = self.libproject_list.GetClientData(libproject_index)
+        libproject.target = self.libproject_target.GetValue()
+        libproject.unsaved = True
 
     def libproject_package_change_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
-        print "Event handler `libproject_package_change_handler' not implemented"
-        event.Skip()
+        libproject_index = self.libproject_list.GetSelection()
+        libproject = self.libproject_list.GetClientData(libproject_index)
+        libproject.package = self.libproject_package.GetValue()
+        libproject.unsaved = True
 
 # end of class noCLIpseFrame
 
