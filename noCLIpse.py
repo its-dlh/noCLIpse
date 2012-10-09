@@ -383,6 +383,7 @@ class noCLIpseFrame(wx.Frame):
                 #add the project to the list of projects in the config file and the sidebar
                 config.projects.append(project)
                 add_project_to_sidebar(project, self.project_list)
+                self.project_list.SetString(0, "<New Project>")
 
                 #clear the project data
                 project_data.__dict__.update(empty_project)
@@ -425,6 +426,7 @@ class noCLIpseFrame(wx.Frame):
                 #add the project to the list of projects in the config file and the sidebar
                 config.libprojects.append(libproject)
                 add_project_to_sidebar(libproject, self.libproject_list)
+                self.project_list.SetString(0, "<New Lib Project>")
 
                 #clear the project data
                 libproject_data.__dict__.update(empty_libproject)
@@ -549,55 +551,99 @@ class noCLIpseFrame(wx.Frame):
         project_index = self.project_list.GetSelection()
         project = self.project_list.GetClientData(project_index)
         project.name = self.project_name.GetValue()
-        project.unsaved = True
+        self.unsave(project, project_index)
 
     def project_target_change_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
         project_index = self.project_list.GetSelection()
         project = self.project_list.GetClientData(project_index)
         project.target = self.project_target.GetValue()
-        project.unsaved = True
+
+        if project.original:
+            compare = project.original.__dict__
+        else:
+            compare = empty_project
+
+        if project.target != compare['target']: self.unsave(project, project_index)
 
     def project_path_change_handler(self, event):
         project_index = self.project_list.GetSelection()
         project = self.project_list.GetClientData(project_index)
         project.path = self.project_path.GetPath()
-        project.unsaved = True
+
+        if project.original:
+            compare = project.original.__dict__
+        else:
+            compare = empty_project
+
+        if project.path != compare['path']: self.unsave(project, project_index)
 
     def activity_name_change_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
         project_index = self.project_list.GetSelection()
         project = self.project_list.GetClientData(project_index)
         project.activity = self.activity_name.GetValue()
-        project.unsaved = True
+        self.unsave(project, project_index)
 
     def project_package_change_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
         project_index = self.project_list.GetSelection()
         project = self.project_list.GetClientData(project_index)
         project.package = self.project_package.GetValue()
-        project.unsaved = True
+        self.unsave(project, project_index)
 
     def libproject_name_change_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
         libproject_index = self.libproject_list.GetSelection()
         libproject = self.libproject_list.GetClientData(libproject_index)
         libproject.name = self.libproject_name.GetValue()
-        libproject.unsaved = True
+        self.unsave(libproject, libproject_index, library=True)
 
     def libproject_target_change_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
         libproject_index = self.libproject_list.GetSelection()
         libproject = self.libproject_list.GetClientData(libproject_index)
         libproject.target = self.libproject_target.GetValue()
-        libproject.unsaved = True
+
+        if libproject.original:
+            compare = libproject.original.__dict__
+        else:
+            compare = empty_libproject
+
+        if libproject.target != compare['target']: self.unsave(libproject, libproject_index, library=True)
 
     def libproject_path_change_handler(self, event):
         libproject_index = self.libproject_list.GetSelection()
         libproject = self.libproject_list.GetClientData(libproject_index)
         libproject.path = self.libproject_path.GetPath()
-        libproject.unsaved = True
+
+        if libproject.original:
+            compare = libproject.original.__dict__
+        else:
+            compare = empty_libproject
+
+        if libproject.path != compare['path']: self.unsave(libproject, libproject_index, library=True)
 
     def libproject_package_change_handler(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
         libproject_index = self.libproject_list.GetSelection()
         libproject = self.libproject_list.GetClientData(libproject_index)
         libproject.package = self.libproject_package.GetValue()
-        libproject.unsaved = True
+        self.unsave(libproject, libproject_index, library=True)
+
+    def unsave(self, project, index, library=False):
+        project.unsaved = True
+
+        if library:
+            list_box = self.libproject_list
+        else:
+            list_box = self.project_list
+
+        if index == 0 and library:
+            fallback = "<New Lib Project>"
+        elif index == 0:
+            fallback = "<New Project>"
+        else:
+            fallback = project.path
+
+        #list_box.SetItemForegroundColour(index, wx.Colour(255, 0, 0))
+        #list_box.SetItemBackgroundColour(index, wx.Colour(255, 0, 0))
+        #list_box.SetItemFont(index, wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_ITALIC, wx.FONTWEIGHT_BOLD))
+        list_box.SetString(index, "*" + (project.name or fallback))
 
 # end of class noCLIpseFrame
 
@@ -628,9 +674,11 @@ def add_project_to_sidebar(project, list_box, do_select = True):
 homedir = os.path.expanduser("~")
 homedir = homedir.replace("\\","/")
 
-empty_project = {'name': '', 'target': '', 'path': homedir, 'activity': '', 'package': '', 'unsaved': False}
+empty_project = {'name': '', 'target': '', 'path': homedir, 'activity': '', 'package': '', 'unsaved': False, 'original': None}
 empty_libproject = dict(empty_project)
 del empty_libproject['activity']
+
+red = wx.Colour(255, 0, 0)
 
 #check if the config file exists
 if os.path.isfile(".config"):
