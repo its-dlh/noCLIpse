@@ -336,11 +336,11 @@ class noCLIpseFrame(wx.Frame):
         self.targets_panel.loadTargets()
 
         for project in config.projects:
-            project.timestamp = time.time()
+            project["timestamp"] = time.time()
             add_project_to_sidebar(project, self.project_list, do_select=False)
 
         for libproject in config.libprojects:
-            libproject.timestamp = time.time()
+            libproject["timestamp"] = time.time()
             add_project_to_sidebar(libproject, self.libproject_list, do_select=False)
 
         new_project = Generic()
@@ -483,6 +483,15 @@ class noCLIpseFrame(wx.Frame):
                 return
 
         config.workspace_path = new_path
+
+        # load projects from this path
+        for dirname in os.listdir(config.workspace_path):
+            path = os.path.join(config.workspace_path, dirname)
+            if os.path.isdir(path):
+                ap = AndroidProject(path + '/AndroidManifest.xml', sdk_dir=config.sdk_path)
+                #Go through the directory and load relevant information
+                tmpproject = {'name': dirname, 'target': ap.platform, 'path': path, 'activity': '', 'package': ap.name, 'unsaved': False, 'original': None}
+                config.projects.append(tmpproject)
 
     def launch_android(self, event):  # wxGlade: noCLIpseFrame.<event_handler>
         Popen(config.sdk_path+androidpath)
@@ -654,8 +663,8 @@ class Generic:
 #write the config file on exit
 def write_config():
     #sort the project lists
-    config.projects.sort(key=lambda project: project.name or project.path)
-    config.libprojects.sort(key=lambda libproject: libproject.name or libproject.path)
+    config.projects.sort(key=lambda project: project["name"] or project["path"])
+    config.libprojects.sort(key=lambda libproject: libproject["name"] or libproject["path"])
 
     print "writing config"
     conf_file = open(".config", "wb")
@@ -664,8 +673,8 @@ def write_config():
 
 def add_project_to_sidebar(project, list_box, do_select = True):
     new_project = copy.copy(project)
-    new_project.original = project
-    project_title = new_project.name or new_project.path
+    new_project["original"] = project
+    project_title = new_project["name"] or new_project["path"]
     new_index = list_box.Append(project_title, new_project)
     print "New Index:", new_index
     if do_select: list_box.SetSelection(new_index)
@@ -685,21 +694,23 @@ if os.path.isfile(".config"):
     read_conf = open(".config", "rb")
     config = cPickle.load(read_conf)
     read_conf.close()
+    
     print "conf exists"
-    #print config.workspace_path
+    print config.workspace_path
     print config.sdk_path
 else:
-    #init the config object
+    # init the config object
     config = Generic()
 
-    #this will need changed to Eclipse's default path in Windows
+    # this will need changed to Eclipse's default path in Windows
     workspace_path = homedir+"/workspace"
     print workspace_path
-    #does the workspace path exist?
+    # does the workspace path exist?
     if os.path.isdir(workspace_path):
         config.workspace_path = workspace_path
         print "workspace exists"
     else:
+        config.workspace_path = homedir
         print "workspace doesn't exist"
 
     #the default Android SDK directory in linux
